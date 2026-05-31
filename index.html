@@ -94,7 +94,7 @@
       border-radius: 50px;
       padding: 14px 20px 14px 44px;
       font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: 14px; color: var(--text);
+      font-size: 16px; color: var(--text);
       outline: none;
       backdrop-filter: blur(16px);
       transition: border-color 0.3s, box-shadow 0.3s;
@@ -374,7 +374,7 @@
   <div class="search-row">
     <div class="search-wrap">
       <i class="fa-solid fa-magnifying-glass"></i>
-      <input id="cityInput" type="text" placeholder="Search city…" autocomplete="off" spellcheck="false" />
+      <input id="cityInput" type="search" placeholder="Search city…" autocomplete="off" spellcheck="false" enterkeyhint="search" />
     </div>
     <button id="searchBtn" class="btn-icon">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
@@ -964,13 +964,30 @@ async function fetchByCoords(lat, lon) {
 document.getElementById('searchBtn').addEventListener('click', () => fetchByCity(document.getElementById('cityInput').value));
 document.getElementById('cityInput').addEventListener('keydown', e => { if (e.key === 'Enter') fetchByCity(e.target.value); });
 
+function getLocationErrorMessage(error) {
+  if (error.code === error.PERMISSION_DENIED) {
+    return 'Location permission is blocked. Allow it in your browser settings, then try again.';
+  }
+  if (error.code === error.POSITION_UNAVAILABLE) {
+    return 'Location is unavailable. Turn on GPS/location services, or use search.';
+  }
+  if (error.code === error.TIMEOUT) {
+    return 'Location took too long. Move near a window, turn on GPS, or use search.';
+  }
+  return 'Could not get your location. Use search instead.';
+}
+
 document.getElementById('locationBtn').addEventListener('click', () => {
+  if (!window.isSecureContext) {
+    setError('Location only works on HTTPS or localhost. Open the site securely, then try again.');
+    return;
+  }
   if (!navigator.geolocation) { setError('Geolocation not supported.'); return; }
   setError(''); setLoading(true, 'Detecting location…');
   navigator.geolocation.getCurrentPosition(
     ({ coords }) => fetchByCoords(coords.latitude, coords.longitude),
-    () => { setLoading(false); setError('Location denied. Use search.'); },
-    { maximumAge: 60000, timeout: 10000 }
+    (error) => { setLoading(false); setError(getLocationErrorMessage(error)); },
+    { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
   );
 });
 </script>
